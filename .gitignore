@@ -1,0 +1,14 @@
+# Keep credentials and raw local captures out of this documentation repository.
+.env
+.env.*
+*.log
+*.pcap
+*.pcapng
+*.pem
+*.key
+chip*.json
+*dataset*
+data/
+credentials/
+private/
+logs/
