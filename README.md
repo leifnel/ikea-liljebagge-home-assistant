@@ -34,7 +34,7 @@ The S3 and H2 have different roles: the S3 handles the border-router application
 Before starting, have:
 
 1. A configured border router with an active Thread network.
-2. Private access to that network's complete Active Operational Dataset in hexadecimal.
+2. USB/serial console access to the border router, used in our setup to retrieve that network's complete Active Operational Dataset in hexadecimal.
 3. The thermostat's setup PIN and discriminator, obtained privately from its setup information.
 4. BLE available to the Mint host for initial commissioning.
 5. IPv6 connectivity between the Mint host, Matter Server and Thread device through the border router, with local discovery/multicast working on the infrastructure network.
@@ -46,7 +46,30 @@ For initial diagnosis, keep the controller hosts and border router on the same i
 
 The exact board wiring, ESP SDK commits, build configuration and flashing commands were not recovered. This guide starts with an operational border router and does not claim a reproduced firmware installation procedure. Use the [Espressif Thread Border Router SDK](https://github.com/espressif/esp-thread-br) for the board-specific setup. Do not interchange S3 application and H2 RCP firmware.
 
-Obtain the active dataset through your border router's supported private management interface. An OpenThread CLI commonly offers `dataset active -x`, but the exact ESP console wrapper was not recovered. Never paste its output into an issue or this repository.
+### Retrieve the Thread dataset through the console
+
+**Observed and confirmed by the author:** we used USB/serial console access to the border router and entered this command at its ESP OpenThread console prompt:
+
+```text
+ot dataset active -x
+```
+
+This command runs on the border router, not in the Linux shell. It prints the existing Thread network's Active Operational Dataset as a long hexadecimal string. The exact serial device, terminal program and baud rate were not retained; use the console settings for your board and firmware.
+
+Copy only the hexadecimal payload, excluding the prompt, any `Done` response and other console output. On the Linux host, paste that payload at the `THREAD_DATASET` prompt in section 3. The chip-tool argument is then `"hex:${THREAD_DATASET}"`: the variable contains only the hexadecimal payload, and `hex:` is added by the command.
+
+The dataset includes network credentials. Keep it private; do not publish its output in screenshots, logs, issues or this repository.
+
+### Should both ESP chips be updated?
+
+The author reports rebuilding and flashing firmware for one ESP in the bridge. The available record does not establish which chip was flashed or whether the other chip was subsequently updated automatically.
+
+- **ESP32-S3:** runs the border-router host application and Wi-Fi backhaul.
+- **ESP32-H2:** runs the Thread radio co-processor (RCP) firmware.
+
+**Upstream capability, not verified on our board:** Espressif supports updating the H2/RCP from the host. With `AUTO_UPDATE_RCP` enabled, an appropriate bundled RCP image and the required boot/reset wiring, the host can update the RCP automatically. See the [RCP update mechanism](https://docs.espressif.com/projects/esp-thread-br/en/latest/dev-guide/rcp_update.html) and [hardware requirements](https://docs.espressif.com/projects/esp-thread-br/en/latest/hardware_platforms.html).
+
+Consequently, flashing the S3 can potentially also lead to an H2 update; this must not be assumed to have happened in our setup. Before manually flashing the other chip, inspect the build configuration, bundled RCP image and startup logs to establish which RCP firmware is running and whether an automatic update occurred. An older H2 version string alone does not establish incompatibility. Use the RCP firmware intended for the selected host build rather than independently selecting the newest image for each chip.
 
 ## 2. Prepare chip-tool on Linux Mint
 
@@ -234,6 +257,7 @@ Adapt the container name. Review outputs privately: addresses and credentials ca
 
 | Claim | Evidence status |
 | --- | --- |
+| Thread dataset retrieved with `ot dataset active -x` through USB/serial console | Confirmed by the author |
 | Linux BLE discovery worked | Observed |
 | chip-tool executable ran on Mint | Observed |
 | Corrected BLE/Thread commissioning completed | User-reported success; successful commissioning log also available for a separate node |
